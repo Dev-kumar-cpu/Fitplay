@@ -1,0 +1,26 @@
+// .gitignore - Files to exclude from version control
+node_modules/
+.expo/
+.expo-shared/
+dist/
+npm-debug.*
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
+*.orig.*
+web-build/
+.env
+.env.local
+.env.*.local
+.DS_Store
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.gradle/
+.buckconfig
+.watchmanconfig
+local.properties
