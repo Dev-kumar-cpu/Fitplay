@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FitPlay - Gamified Fitness Tracking</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #333;
+    }
+
+    .container {
+      background: white;
+      border-radius: 20px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+      padding: 40px;
+      max-width: 500px;
+      width: 90%;
+      text-align: center;
+    }
+
+    .logo {
+      font-size: 60px;
+      margin-bottom: 20px;
+    }
+
+    h1 {
+      color: #667eea;
+      margin-bottom: 10px;
+      font-size: 36px;
+    }
+
+    .subtitle {
+      color: #999;
+      font-size: 18px;
+      margin-bottom: 30px;
+    }
+
+    .features {
+      text-align: left;
+      background: #f5f5f5;
+      padding: 20px;
+      border-radius: 10px;
+      margin-bottom: 30px;
+    }
+
+    .feature-item {
+      display: flex;
+      align-items: center;
+      margin-bottom: 15px;
+      padding: 10px;
+    }
+
+    .feature-item:last-child {
+      margin-bottom: 0;
+    }
+
+    .feature-icon {
+      font-size: 28px;
+      margin-right: 15px;
+      width: 40px;
+    }
+
+    .feature-text {
+      flex: 1;
+    }
+
+    .feature-text h3 {
+      color: #667eea;
+      font-size: 16px;
+      margin-bottom: 5px;
+    }
+
+    .feature-text p {
+      color: #666;
+      font-size: 14px;
+    }
+
+    .button-group {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+
+    button {
+      flex: 1;
+      padding: 12px 20px;
+      border: none;
+      border-radius: 8px;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+    }
+
+    .btn-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 10px 20px rgba(102, 126, 234, 0.4);
+    }
+
+    .btn-secondary {
+      background: #f0f0f0;
+      color: #667eea;
+      border: 2px solid #667eea;
+    }
+
+    .btn-secondary:hover {
+      background: #667eea;
+      color: white;
+    }
+
+    .status {
+      background: #fff3cd;
+      color: #856404;
+      padding: 15px;
+      border-radius: 8px;
+      margin-bottom: 20px;
+      font-size: 14px;
+    }
+
+    .stats {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 15px;
+      margin-bottom: 30px;
+    }
+
+    .stat-card {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      padding: 20px;
+      border-radius: 10px;
+      text-align: center;
+    }
+
+    .stat-value {
+      font-size: 32px;
+      font-weight: bold;
+      margin-bottom: 5px;
+    }
+
+    .stat-label {
+      font-size: 12px;
+      opacity: 0.9;
+    }
+
+    .footer {
+      color: #999;
+      font-size: 12px;
+      margin-top: 20px;
+      padding-top: 20px;
+      border-top: 1px solid #eee;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="logo">💪</div>
+    <h1>FitPlay</h1>
+    <p class="subtitle">Gamified Fitness Tracking App</p>
+
+    <div class="status">
+      ⚠️ Web version in development. Full app launching soon!
+    </div>
+
+    <div class="stats">
+      <div class="stat-card">
+        <div class="stat-value">5</div>
+        <div class="stat-label">Daily Quests</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value">∞</div>
+        <div class="stat-label">Points to Earn</div>
+      </div>
+    </div>
+
+    <div class="features">
+      <div class="feature-item">
+        <div class="feature-icon">🎯</div>
+        <div class="feature-text">
+          <h3>Daily Quests</h3>
+          <p>Complete fitness challenges daily</p>
+        </div>
+      </div>
+
+      <div class="feature-item">
+        <div class="feature-icon">🏆</div>
+        <div class="feature-text">
+          <h3>Leaderboards</h3>
+          <p>Compete with friends globally</p>
+        </div>
+      </div>
+
+      <div class="feature-item">
+        <div class="feature-icon">⭐</div>
+        <div class="feature-text">
+          <h3>Badges & Levels</h3>
+          <p>Unlock achievements and progress</p>
+        </div>
+      </div>
+
+      <div class="feature-item">
+        <div class="feature-icon">📊</div>
+        <div class="feature-text">
+          <h3>Track Activity</h3>
+          <p>Monitor workouts and calories</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="button-group">
+      <button class="btn-primary" onclick="alert('Coming Soon: Login Page')">Login</button>
+      <button class="btn-secondary" onclick="alert('Coming Soon: Registration')">Sign Up</button>
+    </div>
+
+    <div class="footer">
+      <p>FitPlay © 2026 | All Rights Reserved</p>
+      <p>React Native + Expo Web Application</p>
+    </div>
+  </div>
+</body>
+</html>

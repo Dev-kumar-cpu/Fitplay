@@ -3,9 +3,7 @@
     "name": "FitPlay",
     "slug": "fitplay",
     "version": "1.0.0",
-    "assetBundlePatterns": [
-      "**/*"
-    ],
+    "assetBundlePatterns": ["**/*"],
     "ios": {
       "supportsTablet": true
     },
@@ -18,16 +16,6 @@
     "web": {
       "favicon": "./assets/favicon.png"
     },
-    "scheme": "fitplay",
-    "plugins": [
-      [
-        "expo-build-properties",
-        {
-          "android": {
-            "usesCleartextTraffic": true
-          }
-        }
-      ]
-    ]
+    "scheme": "fitplay"
   }
 }

@@ -1,23 +1,32 @@
 import React from 'react';
 import { StatusBar } from 'expo-status-bar';
-import { StyleSheet, View } from 'react-native';
-import { AppProvider } from './context/AppContext';
-import { RootNavigator } from './navigation/RootNavigator';
+import { StyleSheet, View, Text } from 'react-native';
 
 export default function App() {
   return (
-    <AppProvider>
+    <View style={styles.container}>
+      <Text style={styles.title}>FitPlay 💪</Text>
+      <Text style={styles.subtitle}>Gamified Fitness Tracking</Text>
       <StatusBar barStyle="light-content" />
-      <RootNavigator />
-    </AppProvider>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: '#667eea',
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  title: {
+    fontSize: 32,
+    fontWeight: 'bold',
+    color: '#fff',
+    marginBottom: 10,
+  },
+  subtitle: {
+    fontSize: 18,
+    color: '#e0e0e0',
   },
 });

@@ -4,16 +4,24 @@ import { getAuth } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
 
 const firebaseConfig = {
-  apiKey: 'YOUR_API_KEY',
+  apiKey: 'AIzaSyDemoKey1234567890',
   authDomain: 'fitplay-app.firebaseapp.com',
-  projectId: 'fitplay-app',
-  storageBucket: 'fitplay-app.appspot.com',
-  messagingSenderId: 'YOUR_MESSAGING_SENDER_ID',
-  appId: 'YOUR_APP_ID',
+  projectId: 'fitplay-demo',
+  storageBucket: 'fitplay-demo.appspot.com',
+  messagingSenderId: '123456789',
+  appId: '1:123456789:web:abcdefg123456',
 };
 
-const app = initializeApp(firebaseConfig);
-export const auth = getAuth(app);
-export const db = getFirestore(app);
+let app, auth, db;
 
+try {
+  app = initializeApp(firebaseConfig);
+  auth = getAuth(app);
+  db = getFirestore(app);
+} catch (error) {
+  console.warn('Firebase initialization warning:', error.message);
+  // Gracefully handle Firebase errors during development
+}
+
+export { app, auth, db };
 export default app;
