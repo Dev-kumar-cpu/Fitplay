@@ -8,19 +8,6 @@ import {
 } from 'firebase/auth';
 import { doc, setDoc, getDoc } from 'firebase/firestore';
 
-export const getCurrentUser = async () => {
-  try {
-    if (!auth) return null;
-    return new Promise((resolve) => {
-      onAuthStateChanged(auth, (user) => {
-        resolve(user || null);
-      });
-    });
-  } catch (error) {
-    console.warn('Auth service warning:', error);
-    return null;
-  }
-};
 export const registerUser = async (email, password, displayName) => {
   try {
     const userCredential = await createUserWithEmailAndPassword(auth, email, password);

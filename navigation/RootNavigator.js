@@ -125,5 +125,3 @@ export const RootNavigator = () => {
     </NavigationContainer>
   );
 };
-
-const Text = require('react-native').Text;
