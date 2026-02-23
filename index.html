@@ -1,53 +1,117 @@
 <!DOCTYPE html>
+<!--
+  FitPlay Landing Page - Web Entry Point
+  
+  This is the main landing page for FitPlay web application.
+  It serves as a promotional page before the full app launches.
+  
+  Features:
+  - Responsive design with gradient background
+  - Feature highlights section
+  - Stats display cards
+  - Login/Signup button placeholders
+  - Mobile-friendly layout
+  
+  Technologies:
+  - Pure HTML5 & CSS3 (no frameworks)
+  - Google Fonts (Segoe UI)
+  - CSS3 Gradients & Animations
+  - Flexbox & Grid layouts
+  
+  @author FitPlay Team
+  @version 1.0.0
+  @date 2026
+-->
 <html lang="en">
 <head>
+  <!-- Character encoding for proper text display -->
   <meta charset="UTF-8">
+  <!-- Viewport meta tag for responsive design on all devices -->
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <!-- Page title for browser tab -->
   <title>FitPlay - Gamified Fitness Tracking</title>
+  
+  <!-- Internal CSS Styles -->
   <style>
+    /* ============================================
+       GLOBAL RESET & BASE STYLES
+       ============================================ */
+    
+    /* Reset all margins and paddings to zero */
     * {
       margin: 0;
       padding: 0;
+      /* Include padding/border in element's total width/height */
       box-sizing: border-box;
     }
 
+    /* Body element styles - main container */
     body {
+      /* Font family stack for consistent typography */
       font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      /* Purple gradient background - matches app theme */
       background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      /* Minimum height to fill viewport */
       min-height: 100vh;
+      /* Center content both vertically and horizontally */
       display: flex;
       align-items: center;
       justify-content: center;
+      /* Default text color */
       color: #333;
     }
 
+    /* ============================================
+       MAIN CONTAINER STYLES
+       ============================================ */
+    
+    /* White card container for main content */
     .container {
       background: white;
+      /* Rounded corners */
       border-radius: 20px;
+      /* Drop shadow for depth */
       box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+      /* Internal spacing */
       padding: 40px;
+      /* Max width constraint */
       max-width: 500px;
+      /* Responsive width (90% on small screens) */
       width: 90%;
+      /* Center text within container */
       text-align: center;
     }
 
+    /* ============================================
+       HEADER SECTION STYLES
+       ============================================ */
+    
+    /* Logo emoji styling */
     .logo {
       font-size: 60px;
       margin-bottom: 20px;
     }
 
+    /* Main heading - App name */
     h1 {
+      /* Primary brand color */
       color: #667eea;
       margin-bottom: 10px;
       font-size: 36px;
     }
 
+    /* Subtitle/tagline styling */
     .subtitle {
       color: #999;
       font-size: 18px;
       margin-bottom: 30px;
     }
 
+    /* ============================================
+       FEATURES SECTION STYLES
+       ============================================ */
+    
+    /* Features container - gray background card */
     .features {
       text-align: left;
       background: #f5f5f5;
@@ -56,6 +120,7 @@
       margin-bottom: 30px;
     }
 
+    /* Individual feature item */
     .feature-item {
       display: flex;
       align-items: center;
@@ -63,37 +128,83 @@
       padding: 10px;
     }
 
+    /* Remove bottom margin from last feature */
     .feature-item:last-child {
       margin-bottom: 0;
     }
 
+    /* Feature icon (emoji) */
     .feature-icon {
       font-size: 28px;
       margin-right: 15px;
+      /* Fixed width for consistent alignment */
       width: 40px;
     }
 
+    /* Feature text container */
     .feature-text {
       flex: 1;
     }
 
+    /* Feature title */
     .feature-text h3 {
       color: #667eea;
       font-size: 16px;
       margin-bottom: 5px;
     }
 
+    /* Feature description */
     .feature-text p {
       color: #666;
       font-size: 14px;
     }
 
+    /* ============================================
+       STATS SECTION STYLES
+       ============================================ */
+    
+    /* Stats grid layout - 2 columns */
+    .stats {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 15px;
+      margin-bottom: 30px;
+    }
+
+    /* Individual stat card with gradient */
+    .stat-card {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      padding: 20px;
+      border-radius: 10px;
+      text-align: center;
+    }
+
+    /* Stat number value */
+    .stat-value {
+      font-size: 32px;
+      font-weight: bold;
+      margin-bottom: 5px;
+    }
+
+    /* Stat label text */
+    .stat-label {
+      font-size: 12px;
+      opacity: 0.9;
+    }
+
+    /* ============================================
+       BUTTON SECTION STYLES
+       ============================================ */
+    
+    /* Button group container */
     .button-group {
       display: flex;
       gap: 10px;
       margin-bottom: 20px;
     }
 
+    /* Base button styles */
     button {
       flex: 1;
       padding: 12px 20px;
@@ -102,30 +213,42 @@
       font-size: 16px;
       font-weight: 600;
       cursor: pointer;
+      /* Smooth transition for hover effects */
       transition: all 0.3s ease;
     }
 
+    /* Primary button - gradient background */
     .btn-primary {
       background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
       color: white;
     }
 
+    /* Primary button hover effect */
     .btn-primary:hover {
+      /* Slight lift on hover */
       transform: translateY(-2px);
+      /* Enhanced shadow */
       box-shadow: 0 10px 20px rgba(102, 126, 234, 0.4);
     }
 
+    /* Secondary button - outlined style */
     .btn-secondary {
       background: #f0f0f0;
       color: #667eea;
       border: 2px solid #667eea;
     }
 
+    /* Secondary button hover effect */
     .btn-secondary:hover {
       background: #667eea;
       color: white;
     }
 
+    /* ============================================
+       STATUS & FOOTER STYLES
+       ============================================ */
+    
+    /* Warning status banner */
     .status {
       background: #fff3cd;
       color: #856404;
@@ -135,63 +258,51 @@
       font-size: 14px;
     }
 
-    .stats {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 15px;
-      margin-bottom: 30px;
-    }
-
-    .stat-card {
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-      color: white;
-      padding: 20px;
-      border-radius: 10px;
-      text-align: center;
-    }
-
-    .stat-value {
-      font-size: 32px;
-      font-weight: bold;
-      margin-bottom: 5px;
-    }
-
-    .stat-label {
-      font-size: 12px;
-      opacity: 0.9;
-    }
-
+    /* Footer section */
     .footer {
       color: #999;
       font-size: 12px;
       margin-top: 20px;
       padding-top: 20px;
+      /* Top border separator */
       border-top: 1px solid #eee;
     }
   </style>
 </head>
 <body>
+  <!-- Main content container -->
   <div class="container">
+    <!-- App Logo -->
     <div class="logo">💪</div>
+    
+    <!-- App Title -->
     <h1>FitPlay</h1>
+    
+    <!-- App Tagline -->
     <p class="subtitle">Gamified Fitness Tracking App</p>
 
+    <!-- Development Status Banner -->
     <div class="status">
       ⚠️ Web version in development. Full app launching soon!
     </div>
 
+    <!-- Stats Section - Shows key metrics -->
     <div class="stats">
+      <!-- Daily Quests stat card -->
       <div class="stat-card">
         <div class="stat-value">5</div>
         <div class="stat-label">Daily Quests</div>
       </div>
+      <!-- Points stat card (infinite potential) -->
       <div class="stat-card">
         <div class="stat-value">∞</div>
         <div class="stat-label">Points to Earn</div>
       </div>
     </div>
 
+    <!-- Features Section - Highlights app capabilities -->
     <div class="features">
+      <!-- Feature 1: Daily Quests -->
       <div class="feature-item">
         <div class="feature-icon">🎯</div>
         <div class="feature-text">
@@ -200,6 +311,7 @@
         </div>
       </div>
 
+      <!-- Feature 2: Leaderboards -->
       <div class="feature-item">
         <div class="feature-icon">🏆</div>
         <div class="feature-text">
@@ -208,6 +320,7 @@
         </div>
       </div>
 
+      <!-- Feature 3: Badges & Levels -->
       <div class="feature-item">
         <div class="feature-icon">⭐</div>
         <div class="feature-text">
@@ -216,6 +329,7 @@
         </div>
       </div>
 
+      <!-- Feature 4: Activity Tracking -->
       <div class="feature-item">
         <div class="feature-icon">📊</div>
         <div class="feature-text">
@@ -225,11 +339,15 @@
       </div>
     </div>
 
+    <!-- Action Buttons Section -->
     <div class="button-group">
+      <!-- Login button - triggers alert for demo -->
       <button class="btn-primary" onclick="alert('Coming Soon: Login Page')">Login</button>
+      <!-- Sign Up button - triggers alert for demo -->
       <button class="btn-secondary" onclick="alert('Coming Soon: Registration')">Sign Up</button>
     </div>
 
+    <!-- Footer Section -->
     <div class="footer">
       <p>FitPlay © 2026 | All Rights Reserved</p>
       <p>React Native + Expo Web Application</p>

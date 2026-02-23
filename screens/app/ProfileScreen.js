@@ -1,164 +1,195 @@
-// Profile Screen
+// Profile Screen - User Profile and Settings
 import React, { useState, useEffect } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
+import { 
+  View, 
+  Text, 
+  StyleSheet, 
+  ScrollView, 
   TouchableOpacity,
   Alert,
-  ActivityIndicator,
+  RefreshControl,
+  Switch
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useApp } from '../context/AppContext';
-import { getUserStats, badgesConfig } from '../services/gamificationService';
-import { logoutUser } from '../services/authService';
-import { formatDuration, getLevelFromPoints } from '../utils/helpers';
+import { useApp } from '../../context/AppContext';
+import { useTheme } from '../../context/ThemeContext';
+import { logoutUser } from '../../services/authService';
+import { getLevel, BADGES, LEVELS, formatNumber } from '../../utils/helpers';
+import { getLevelColor } from '../../utils/helpers';
 
 export const ProfileScreen = ({ navigation }) => {
-  const { user, userProfile, setIsLoggedIn, setUser } = useApp();
-  const [stats, setStats] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const { user, userProfile, setIsLoggedIn } = useApp();
+  const { colors, isDarkMode, toggleTheme } = useTheme();
+  const [refreshing, setRefreshing] = useState(false);
 
-  useEffect(() => {
-    const loadStats = async () => {
-      if (!user?.uid) return;
-      try {
-        const userStats = await getUserStats(user.uid);
-        setStats(userStats);
-      } catch (error) {
-        console.error('Error loading stats:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    loadStats();
-  }, [user?.uid]);
-
-  const handleLogout = async () => {
-    Alert.alert('Logout', 'Are you sure you want to logout?', [
-      {
-        text: 'Cancel',
-        style: 'cancel',
-      },
-      {
-        text: 'Logout',
-        style: 'destructive',
-        onPress: async () => {
-          const result = await logoutUser();
-          if (result.success) {
-            setIsLoggedIn(false);
-            setUser(null);
-          } else {
-            Alert.alert('Error', result.error);
-          }
-        },
-      },
-    ]);
+  const onRefresh = async () => {
+    setRefreshing(true);
+    setTimeout(() => setRefreshing(false), 1000);
   };
 
-  if (loading) {
-    return (
-      <View style={styles.container}>
-        <ActivityIndicator size="large" color="#667eea" />
-      </View>
+  const handleLogout = () => {
+    Alert.alert(
+      'Logout',
+      'Are you sure you want to logout?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { 
+          text: 'Logout', 
+          style: 'destructive',
+          onPress: async () => {
+            const result = await logoutUser();
+            if (result.success) {
+              setIsLoggedIn(false);
+            } else {
+              Alert.alert('Error', 'Failed to logout');
+            }
+          }
+        }
+      ]
     );
-  }
+  };
 
-  const level = getLevelFromPoints(stats?.totalPoints || 0);
-  const userBadges = stats?.badges || [];
-  const badgesList = badgesConfig.filter((b) => userBadges.includes(b.id));
+  const level = userProfile ? getLevel(userProfile.totalPoints || 0) : { level: 1, name: 'Beginner' };
+  const levelColor = getLevelColor(level.level);
+  const userBadges = userProfile?.badges || [];
+  const points = userProfile?.totalPoints || 0;
+  const workoutCount = userProfile?.workoutCount || 0;
+  const totalMinutes = userProfile?.totalMinutes || 0;
+  const streak = userProfile?.streak || 0;
+
+  const getLevelProgress = () => {
+    if (level.level >= 5) return 100;
+    const currentLevel = LEVELS.find(l => l.level === level.level);
+    const nextLevel = LEVELS.find(l => l.level === level.level + 1);
+    if (!currentLevel || !nextLevel) return 0;
+    
+    const pointsInLevel = points - currentLevel.minPoints;
+    const pointsNeeded = nextLevel.minPoints - currentLevel.minPoints;
+    return Math.round((pointsInLevel / pointsNeeded) * 100);
+  };
+
+  const levelProgress = getLevelProgress();
 
   return (
-    <ScrollView style={styles.container}>
+    <ScrollView 
+      style={styles.container}
+      refreshControl={
+        <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#667eea']} />
+      }
+    >
       {/* Header */}
-      <LinearGradient colors={['#667eea', '#764ba2']} style={styles.header}>
+      <LinearGradient
+        colors={['#667eea', '#764ba2']}
+        style={styles.header}
+      >
         <View style={styles.profileHeader}>
-          <View style={styles.avatarContainer}>
-            <Text style={styles.avatar}>👤</Text>
+          <View style={[styles.avatar, { backgroundColor: levelColor }]}>
+            <Text style={styles.avatarText}>
+              {userProfile?.displayName?.charAt(0).toUpperCase() || '?'}
+            </Text>
           </View>
-          <View style={styles.headerInfo}>
-            <Text style={styles.displayName}>{userProfile?.displayName || 'Athlete'}</Text>
-            <Text style={styles.email}>{user?.email}</Text>
+          <Text style={styles.displayName}>{userProfile?.displayName || 'User'}</Text>
+          <Text style={styles.email}>{user?.email}</Text>
+          
+          {/* Level Badge */}
+          <View style={[styles.levelBadge, { backgroundColor: levelColor }]}>
+            <Text style={styles.levelText}>Level {level.level}</Text>
+            <Text style={styles.levelName}>{level.name}</Text>
           </View>
         </View>
       </LinearGradient>
 
-      {/* Level and Stats Overview */}
-      <View style={styles.levelContainer}>
-        <LinearGradient colors={[level.color, level.color + '99']} style={styles.levelCard}>
-          <Text style={styles.levelLabel}>Current Level</Text>
-          <Text style={styles.levelNumber}>{level.level}</Text>
-          <Text style={styles.levelName}>{level.name}</Text>
-        </LinearGradient>
+      {/* Level Progress */}
+      <View style={styles.levelProgressContainer}>
+        <View style={styles.levelProgressHeader}>
+          <Text style={styles.levelProgressLabel}>Progress to Level {level.level + 1}</Text>
+          <Text style={styles.levelProgressPercent}>{levelProgress}%</Text>
+        </View>
+        <View style={styles.progressBar}>
+          <View style={[styles.progressFill, { width: `${levelProgress}%`, backgroundColor: levelColor }]} />
+        </View>
+        <Text style={styles.pointsToNextLevel}>
+          {level.level < 5 ? `${LEVELS[level.level]?.minPoints - points + 1 || 0} points to next level` : 'Maximum level reached!'}
+        </Text>
       </View>
 
       {/* Stats Grid */}
       <View style={styles.statsGrid}>
-        <View style={styles.statBox}>
+        <View style={styles.statItem}>
+          <Text style={styles.statValue}>{formatNumber(points)}</Text>
           <Text style={styles.statLabel}>Total Points</Text>
-          <Text style={styles.statValue}>{stats?.totalPoints || 0}</Text>
         </View>
-        <View style={styles.statBox}>
+        <View style={styles.statItem}>
+          <Text style={styles.statValue}>{workoutCount}</Text>
           <Text style={styles.statLabel}>Workouts</Text>
-          <Text style={styles.statValue}>{stats?.workoutCount || 0}</Text>
         </View>
-        <View style={styles.statBox}>
-          <Text style={styles.statLabel}>Total Time</Text>
-          <Text style={styles.statValue}>{formatDuration(stats?.totalMinutes || 0)}</Text>
+        <View style={styles.statItem}>
+          <Text style={styles.statValue}>{totalMinutes}</Text>
+          <Text style={styles.statLabel}>Minutes</Text>
         </View>
-        <View style={styles.statBox}>
-          <Text style={styles.statLabel}>Streak</Text>
-          <Text style={styles.statValue}>{stats?.streak || 0}</Text>
+        <View style={styles.statItem}>
+          <Text style={styles.statValue}>{streak}</Text>
+          <Text style={styles.statLabel}>Day Streak</Text>
         </View>
       </View>
 
-      {/* Achievements/Badges */}
-      <View style={styles.achievementsContainer}>
-        <Text style={styles.sectionTitle}>🏆 Achievements ({badgesList.length})</Text>
-        {badgesList.length > 0 ? (
-          <View style={styles.badgesContainer}>
-            {badgesList.map((badge) => (
-              <View key={badge.id} style={styles.badgeCard}>
-                <View style={[styles.badgeIcon, { backgroundColor: badge.color }]}>
-                  <Text style={styles.badgeEmoji}>🎖️</Text>
-                </View>
-                <Text style={styles.badgeName}>{badge.name}</Text>
-                <Text style={styles.badgeDesc}>{badge.description}</Text>
+      {/* Badges Section */}
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>🏆 Badges ({userBadges.length}/{BADGES.length})</Text>
+        <View style={styles.badgesGrid}>
+          {BADGES.map((badge) => {
+            const earned = userBadges.includes(badge.id);
+            return (
+              <View key={badge.id} style={[styles.badgeItem, !earned && styles.badgeLocked]}>
+                <Text style={styles.badgeIcon}>{earned ? badge.icon : '🔒'}</Text>
+                <Text style={[styles.badgeName, !earned && styles.badgeNameLocked]}>{badge.name}</Text>
+                <Text style={styles.badgeDescription}>{badge.description}</Text>
               </View>
-            ))}
-          </View>
-        ) : (
-          <Text style={styles.noBadgesText}>
-            Complete workouts to unlock achievements!
-          </Text>
-        )}
+            );
+          })}
+        </View>
       </View>
 
-      {/* Settings Section */}
-      <View style={styles.settingsContainer}>
-        <Text style={styles.sectionTitle}>⚙️ Settings</Text>
-        <TouchableOpacity style={styles.settingItem}>
-          <Text style={styles.settingLabel}>Edit Profile</Text>
-          <Text style={styles.settingArrow}>›</Text>
+      {/* Menu Items */}
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Settings</Text>
+        
+        <TouchableOpacity style={styles.menuItem}>
+          <Text style={styles.menuIcon}>🔔</Text>
+          <Text style={styles.menuText}>Notifications</Text>
+          <Text style={styles.menuArrow}>›</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.settingItem}>
-          <Text style={styles.settingLabel}>Preferences</Text>
-          <Text style={styles.settingArrow}>›</Text>
+        
+        <TouchableOpacity style={styles.menuItem}>
+          <Text style={styles.menuIcon}>🎨</Text>
+          <Text style={styles.menuText}>Dark Mode</Text>
+          <Switch
+            value={isDarkMode}
+            onValueChange={toggleTheme}
+            trackColor={{ false: '#767577', true: '#667eea' }}
+            thumbColor={isDarkMode ? '#fff' : '#f4f3f4'}
+          />
         </TouchableOpacity>
-        <TouchableOpacity style={styles.settingItem}>
-          <Text style={styles.settingLabel}>About FitPlay</Text>
-          <Text style={styles.settingArrow}>›</Text>
+        
+        <TouchableOpacity style={styles.menuItem}>
+          <Text style={styles.menuIcon}>❓</Text>
+          <Text style={styles.menuText}>Help & Support</Text>
+          <Text style={styles.menuArrow}>›</Text>
+        </TouchableOpacity>
+        
+        <TouchableOpacity style={styles.menuItem}>
+          <Text style={styles.menuIcon}>ℹ️</Text>
+          <Text style={styles.menuText}>About</Text>
+          <Text style={styles.menuArrow}>›</Text>
         </TouchableOpacity>
       </View>
 
       {/* Logout Button */}
       <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
-        <Text style={styles.logoutButtonText}>Logout</Text>
+        <Text style={styles.logoutText}>Logout</Text>
       </TouchableOpacity>
 
-      <View style={styles.footer} />
+      <View style={styles.bottomPadding} />
     </ScrollView>
   );
 };
@@ -169,28 +200,30 @@ const styles = StyleSheet.create({
     backgroundColor: '#f5f5f5',
   },
   header: {
-    paddingHorizontal: 20,
-    paddingVertical: 30,
     paddingTop: 50,
+    paddingBottom: 30,
+    paddingHorizontal: 20,
+    borderBottomLeftRadius: 30,
+    borderBottomRightRadius: 30,
+    alignItems: 'center',
   },
   profileHeader: {
-    flexDirection: 'row',
     alignItems: 'center',
-  },
-  avatarContainer: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 15,
   },
   avatar: {
-    fontSize: 40,
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 15,
+    borderWidth: 4,
+    borderColor: '#fff',
   },
-  headerInfo: {
-    flex: 1,
+  avatarText: {
+    fontSize: 40,
+    fontWeight: 'bold',
+    color: '#fff',
   },
   displayName: {
     fontSize: 24,
@@ -200,163 +233,162 @@ const styles = StyleSheet.create({
   },
   email: {
     fontSize: 14,
-    color: '#e0e0e0',
+    color: 'rgba(255,255,255,0.8)',
+    marginBottom: 15,
   },
-  levelContainer: {
-    marginHorizontal: 15,
-    marginVertical: 20,
+  levelBadge: {
+    paddingHorizontal: 20,
+    paddingVertical: 8,
+    borderRadius: 20,
   },
-  levelCard: {
-    paddingVertical: 20,
-    paddingHorizontal: 15,
-    borderRadius: 15,
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-    elevation: 5,
-  },
-  levelLabel: {
-    fontSize: 13,
-    color: 'rgba(255, 255, 255, 0.8)',
-    fontWeight: '600',
-  },
-  levelNumber: {
-    fontSize: 48,
+  levelText: {
+    fontSize: 14,
     fontWeight: 'bold',
     color: '#fff',
-    marginVertical: 5,
+    textAlign: 'center',
   },
   levelName: {
-    fontSize: 16,
-    color: 'rgba(255, 255, 255, 0.9)',
-    fontWeight: '500',
+    fontSize: 12,
+    color: 'rgba(255,255,255,0.9)',
+    textAlign: 'center',
+  },
+  levelProgressContainer: {
+    backgroundColor: '#fff',
+    marginHorizontal: 15,
+    marginTop: -20,
+    borderRadius: 15,
+    padding: 15,
+    elevation: 3,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+  },
+  levelProgressHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 10,
+  },
+  levelProgressLabel: {
+    fontSize: 14,
+    color: '#666',
+  },
+  levelProgressPercent: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: '#667eea',
+  },
+  progressBar: {
+    height: 10,
+    backgroundColor: '#f0f0f0',
+    borderRadius: 5,
+    overflow: 'hidden',
+  },
+  progressFill: {
+    height: '100%',
+    borderRadius: 5,
+  },
+  pointsToNextLevel: {
+    fontSize: 12,
+    color: '#999',
+    textAlign: 'center',
+    marginTop: 8,
   },
   statsGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    marginHorizontal: 10,
-    marginBottom: 20,
-    gap: 10,
+    padding: 10,
+    marginTop: 10,
   },
-  statBox: {
-    width: '48%',
-    backgroundColor: '#fff',
-    paddingVertical: 15,
-    paddingHorizontal: 10,
-    borderRadius: 12,
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 2,
+  statItem: {
+    width: '50%',
+    padding: 10,
+  },
+  statValue: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#333',
+    textAlign: 'center',
   },
   statLabel: {
     fontSize: 12,
-    color: '#999',
-    marginBottom: 5,
+    color: '#666',
+    textAlign: 'center',
+    marginTop: 2,
   },
-  statValue: {
-    fontSize: 22,
-    fontWeight: 'bold',
-    color: '#667eea',
-  },
-  achievementsContainer: {
-    marginHorizontal: 15,
-    marginBottom: 20,
+  section: {
+    padding: 15,
   },
   sectionTitle: {
     fontSize: 18,
     fontWeight: 'bold',
     color: '#333',
-    marginBottom: 12,
+    marginBottom: 15,
   },
-  badgesContainer: {
+  badgesGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 10,
   },
-  badgeCard: {
-    width: '48%',
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 12,
+  badgeItem: {
+    width: '33.33%',
     alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 2,
+    padding: 10,
+  },
+  badgeLocked: {
+    opacity: 0.5,
   },
   badgeIcon: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 8,
-  },
-  badgeEmoji: {
-    fontSize: 24,
+    fontSize: 32,
+    marginBottom: 5,
   },
   badgeName: {
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: 'bold',
     color: '#333',
-    marginBottom: 3,
-  },
-  badgeDesc: {
-    fontSize: 11,
-    color: '#999',
     textAlign: 'center',
   },
-  noBadgesText: {
-    fontSize: 14,
+  badgeNameLocked: {
     color: '#999',
+  },
+  badgeDescription: {
+    fontSize: 10,
+    color: '#666',
     textAlign: 'center',
-    paddingVertical: 20,
   },
-  settingsContainer: {
-    marginHorizontal: 15,
-    marginBottom: 20,
-  },
-  settingItem: {
+  menuItem: {
     backgroundColor: '#fff',
-    paddingHorizontal: 15,
-    paddingVertical: 15,
-    borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 5,
-    borderRadius: 8,
+    padding: 15,
+    borderRadius: 10,
+    marginBottom: 10,
   },
-  settingLabel: {
+  menuIcon: {
+    fontSize: 20,
+    marginRight: 15,
+  },
+  menuText: {
+    flex: 1,
     fontSize: 16,
     color: '#333',
-    fontWeight: '500',
   },
-  settingArrow: {
+  menuArrow: {
     fontSize: 20,
     color: '#999',
   },
   logoutButton: {
+    backgroundColor: '#F44336',
     marginHorizontal: 15,
-    marginBottom: 20,
-    backgroundColor: '#FF6B6B',
-    paddingVertical: 14,
+    padding: 15,
     borderRadius: 10,
     alignItems: 'center',
   },
-  logoutButtonText: {
+  logoutText: {
     color: '#fff',
     fontSize: 16,
     fontWeight: 'bold',
   },
-  footer: {
+  bottomPadding: {
     height: 30,
   },
 });

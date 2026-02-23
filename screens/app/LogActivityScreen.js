@@ -1,209 +1,216 @@
-// Log Activity Screen
+// Log Activity Screen - Workout Logging
 import React, { useState } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
+import { 
+  View, 
+  Text, 
+  StyleSheet, 
+  ScrollView, 
   TouchableOpacity,
   TextInput,
   Alert,
-  ActivityIndicator,
-  Modal,
-  FlatList,
+  ActivityIndicator
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useApp } from '../context/AppContext';
-import { logActivity, activityTypes } from '../services/activityService';
-import { calculateCalories, formatTime } from '../utils/helpers';
+import { useApp } from '../../context/AppContext';
+import { logActivity, ACTIVITY_TYPES, INTENSITY_LEVELS } from '../../services/activityService';
+import { awardActivityPoints } from '../../services/gamificationService';
+import { getActivityIcon, getIntensityColor } from '../../utils/helpers';
 
 export const LogActivityScreen = ({ navigation }) => {
   const { user } = useApp();
-  const [selectedType, setSelectedType] = useState('running');
+  const [loading, setLoading] = useState(false);
+  
+  // Form state
+  const [selectedType, setSelectedType] = useState(null);
   const [duration, setDuration] = useState('');
   const [distance, setDistance] = useState('');
-  const [intensity, setIntensity] = useState('medium');
+  const [selectedIntensity, setSelectedIntensity] = useState('medium');
   const [notes, setNotes] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [showActivityTypePicker, setShowActivityTypePicker] = useState(false);
 
   const handleLogActivity = async () => {
-    if (!duration || isNaN(parseInt(duration))) {
-      Alert.alert('Invalid Duration', 'Please enter a valid duration in minutes');
+    if (!user) return;
+
+    // Validation
+    if (!selectedType) {
+      Alert.alert('Error', 'Please select an activity type');
+      return;
+    }
+
+    const durationNum = parseInt(duration);
+    if (!duration || isNaN(durationNum) || durationNum <= 0) {
+      Alert.alert('Error', 'Please enter a valid duration');
       return;
     }
 
     setLoading(true);
     try {
-      const durationMin = parseInt(duration);
-      const caloriesBurned = calculateCalories(selectedType, durationMin);
-
-      const activityData = {
+      // Log the activity
+      const activityResult = await logActivity(user.uid, {
         type: selectedType,
-        duration: durationMin,
-        distance: distance ? parseFloat(distance) : null,
-        intensity,
-        notes,
-        caloriesBurned,
-        timestamp: formatTime(new Date()),
-      };
+        duration: durationNum,
+        distance: distance ? parseFloat(distance) : 0,
+        intensity: selectedIntensity,
+        notes
+      });
 
-      const result = await logActivity(user.uid, activityData);
+      if (activityResult.success) {
+        // Award points for the activity
+        const pointsResult = await awardActivityPoints(user.uid, durationNum);
+        
+        let message = `🎉 Activity logged successfully!\n\n`;
+        message += `+${durationNum} points earned!`;
+        
+        if (pointsResult.success && pointsResult.data.newBadges?.length > 0) {
+          const newBadges = pointsResult.data.newBadges;
+          message += `\n\n🏆 New Badge(s): ${newBadges.map(b => b.name).join(', ')}`;
+        }
 
-      if (result.success) {
-        Alert.alert(
-          'Activity Logged! ✅',
-          `${activityTypes[selectedType]?.label}\n${durationMin} minutes\n${caloriesBurned} calories burned`,
-          [
-            {
-              text: 'OK',
-              onPress: () => {
-                setDuration('');
-                setDistance('');
-                setIntensity('medium');
-                setNotes('');
-                setSelectedType('running');
-                navigation.goBack();
-              },
-            },
-          ]
-        );
+        Alert.alert('Great Job!', message, [
+          { text: 'OK', onPress: () => navigation.goBack() }
+        ]);
+      } else {
+        Alert.alert('Error', activityResult.error || 'Failed to log activity');
       }
     } catch (error) {
-      Alert.alert('Error', error.message);
+      Alert.alert('Error', 'An unexpected error occurred');
     } finally {
       setLoading(false);
     }
   };
 
-  const ActivityTypeButton = ({ type, label, icon }) => (
-    <TouchableOpacity
-      style={[
-        styles.typeButton,
-        selectedType === type && styles.typeButtonSelected,
-      ]}
-      onPress={() => setSelectedType(type)}
-    >
-      <Text style={styles.typeEmoji}>{icon}</Text>
-      <Text style={[styles.typeLabel, selectedType === type && styles.typeLabelSelected]}>
-        {label}
-      </Text>
-    </TouchableOpacity>
-  );
-
   return (
     <View style={styles.container}>
-      <LinearGradient colors={['#667eea', '#764ba2']} style={styles.header}>
-        <Text style={styles.headerTitle}>Log Activity ➕</Text>
+      {/* Header */}
+      <LinearGradient
+        colors={['#667eea', '#764ba2']}
+        style={styles.header}
+      >
+        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+          <Text style={styles.backText}>‹ Back</Text>
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>Log Activity</Text>
         <Text style={styles.headerSubtitle}>Record your workout</Text>
       </LinearGradient>
 
-      <ScrollView style={styles.scrollContainer} showsVerticalScrollIndicator={false}>
+      <ScrollView style={styles.form} showsVerticalScrollIndicator={false}>
         {/* Activity Type Selection */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Activity Type</Text>
-          <View style={styles.typeButtonsContainer}>
-            {Object.entries(activityTypes).map(([key, value]) => (
-              <ActivityTypeButton
-                key={key}
-                type={key}
-                label={value.label}
-                icon={value.icon}
-              />
-            ))}
-          </View>
-        </View>
-
-        {/* Duration Input */}
-        <View style={styles.section}>
-          <Text style={styles.label}>Duration (minutes) *</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="e.g., 30"
-            keyboardType="numeric"
-            value={duration}
-            onChangeText={setDuration}
-            editable={!loading}
-          />
-        </View>
-
-        {/* Distance Input */}
-        <View style={styles.section}>
-          <Text style={styles.label}>Distance (km)</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="e.g., 5.2"
-            keyboardType="decimal-pad"
-            value={distance}
-            onChangeText={setDistance}
-            editable={!loading}
-          />
-        </View>
-
-        {/* Intensity Selection */}
-        <View style={styles.section}>
-          <Text style={styles.label}>Intensity</Text>
-          <View style={styles.intensityContainer}>
-            {['light', 'medium', 'high'].map((level) => (
+          <Text style={styles.sectionTitle}>Select Activity</Text>
+          <View style={styles.activityGrid}>
+            {ACTIVITY_TYPES.map((activity) => (
               <TouchableOpacity
-                key={level}
+                key={activity.id}
                 style={[
-                  styles.intensityButton,
-                  intensity === level && styles.intensityButtonSelected,
+                  styles.activityItem,
+                  selectedType === activity.id && styles.activityItemSelected
                 ]}
-                onPress={() => setIntensity(level)}
+                onPress={() => setSelectedType(activity.id)}
               >
-                <Text
-                  style={[
-                    styles.intensityText,
-                    intensity === level && styles.intensityTextSelected,
-                  ]}
-                >
-                  {level.charAt(0).toUpperCase() + level.slice(1)}
+                <Text style={styles.activityIcon}>{activity.icon}</Text>
+                <Text style={[
+                  styles.activityName,
+                  selectedType === activity.id && styles.activityNameSelected
+                ]}>
+                  {activity.name}
                 </Text>
               </TouchableOpacity>
             ))}
           </View>
         </View>
 
-        {/* Notes */}
+        {/* Duration Input */}
         <View style={styles.section}>
-          <Text style={styles.label}>Notes</Text>
+          <Text style={styles.sectionTitle}>Duration (minutes)</Text>
           <TextInput
-            style={[styles.input, styles.notesInput]}
-            placeholder="How did you feel? Any observations?"
-            multiline
-            numberOfLines={4}
-            value={notes}
-            onChangeText={setNotes}
-            editable={!loading}
+            style={styles.input}
+            value={duration}
+            onChangeText={setDuration}
+            placeholder="Enter duration"
+            placeholderTextColor="#999"
+            keyboardType="numeric"
           />
         </View>
 
-        {/* Calories Preview */}
-        {duration && (
-          <View style={styles.previewSection}>
-            <Text style={styles.previewTitle}>Estimated Calories</Text>
-            <Text style={styles.previewValue}>
-              {calculateCalories(selectedType, parseInt(duration))} kcal
-            </Text>
-          </View>
-        )}
+        {/* Distance Input (Optional) */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Distance (km) - Optional</Text>
+          <TextInput
+            style={styles.input}
+            value={distance}
+            onChangeText={setDistance}
+            placeholder="Enter distance"
+            placeholderTextColor="#999"
+            keyboardType="decimal-pad"
+          />
+        </View>
 
-        {/* Log Button */}
+        {/* Intensity Selection */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Intensity</Text>
+          <View style={styles.intensityContainer}>
+            {INTENSITY_LEVELS.map((intensity) => (
+              <TouchableOpacity
+                key={intensity.id}
+                style={[
+                  styles.intensityButton,
+                  selectedIntensity === intensity.id && {
+                    backgroundColor: getIntensityColor(intensity.id),
+                    borderColor: getIntensityColor(intensity.id)
+                  }
+                ]}
+                onPress={() => setSelectedIntensity(intensity.id)}
+              >
+                <Text style={[
+                  styles.intensityText,
+                  selectedIntensity === intensity.id && styles.intensityTextSelected
+                ]}>
+                  {intensity.name}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </View>
+
+        {/* Notes Input */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Notes - Optional</Text>
+          <TextInput
+            style={[styles.input, styles.notesInput]}
+            value={notes}
+            onChangeText={setNotes}
+            placeholder="How did it go? Any observations?"
+            placeholderTextColor="#999"
+            multiline
+            numberOfLines={3}
+          />
+        </View>
+
+        {/* Points Preview */}
+        <View style={styles.pointsPreview}>
+          <Text style={styles.pointsPreviewText}>
+            You'll earn: <Text style={styles.pointsValue}>{duration || 0}</Text> points
+          </Text>
+        </View>
+
+        {/* Submit Button */}
         <TouchableOpacity
-          style={[styles.logButton, loading && styles.buttonDisabled]}
+          style={styles.submitButton}
           onPress={handleLogActivity}
-          disabled={loading || !duration}
+          disabled={loading}
         >
-          {loading ? (
-            <ActivityIndicator color="#fff" />
-          ) : (
-            <Text style={styles.logButtonText}>Log Activity</Text>
-          )}
+          <LinearGradient
+            colors={['#667eea', '#764ba2']}
+            style={styles.submitGradient}
+          >
+            {loading ? (
+              <ActivityIndicator color="#fff" />
+            ) : (
+              <Text style={styles.submitText}>Log Activity</Text>
+            )}
+          </LinearGradient>
         </TouchableOpacity>
 
-        <View style={styles.spacer} />
+        <View style={styles.bottomPadding} />
       </ScrollView>
     </View>
   );
@@ -215,9 +222,19 @@ const styles = StyleSheet.create({
     backgroundColor: '#f5f5f5',
   },
   header: {
-    paddingHorizontal: 20,
-    paddingVertical: 30,
     paddingTop: 50,
+    paddingBottom: 25,
+    paddingHorizontal: 20,
+    borderBottomLeftRadius: 30,
+    borderBottomRightRadius: 30,
+  },
+  backButton: {
+    marginBottom: 10,
+  },
+  backText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
   },
   headerTitle: {
     fontSize: 28,
@@ -226,90 +243,80 @@ const styles = StyleSheet.create({
   },
   headerSubtitle: {
     fontSize: 14,
-    color: '#e0e0e0',
+    color: 'rgba(255,255,255,0.8)',
     marginTop: 5,
   },
-  scrollContainer: {
+  form: {
     flex: 1,
-    padding: 15,
+    padding: 20,
   },
   section: {
     marginBottom: 20,
   },
   sectionTitle: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: 'bold',
     color: '#333',
     marginBottom: 12,
   },
-  label: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#333',
-    marginBottom: 8,
-  },
-  input: {
-    backgroundColor: '#fff',
-    borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 10,
-    paddingHorizontal: 15,
-    paddingVertical: 12,
-    fontSize: 16,
-    color: '#333',
-  },
-  notesInput: {
-    textAlignVertical: 'top',
-    paddingTop: 12,
-  },
-  typeButtonsContainer: {
+  activityGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 10,
+    marginHorizontal: -5,
   },
-  typeButton: {
-    width: '30%',
+  activityItem: {
+    width: '25%',
+    padding: 5,
+  },
+  activityItemSelected: {},
+  activityInner: {
     backgroundColor: '#fff',
-    paddingVertical: 12,
-    paddingHorizontal: 10,
-    borderRadius: 10,
+    borderRadius: 12,
+    padding: 12,
     alignItems: 'center',
     borderWidth: 2,
-    borderColor: '#f0f0f0',
+    borderColor: 'transparent',
   },
-  typeButtonSelected: {
-    borderColor: '#667eea',
-    backgroundColor: '#f0f4ff',
-  },
-  typeEmoji: {
+  activityIcon: {
     fontSize: 28,
     marginBottom: 5,
+    textAlign: 'center',
   },
-  typeLabel: {
-    fontSize: 12,
-    fontWeight: '600',
+  activityName: {
+    fontSize: 11,
     color: '#666',
     textAlign: 'center',
   },
-  typeLabelSelected: {
+  activityNameSelected: {
     color: '#667eea',
+    fontWeight: 'bold',
   },
-  intensityContainer: {
-    flexDirection: 'row',
-    gap: 10,
-  },
-  intensityButton: {
-    flex: 1,
+  input: {
     backgroundColor: '#fff',
-    paddingVertical: 12,
     borderRadius: 10,
-    alignItems: 'center',
+    padding: 15,
+    fontSize: 16,
+    color: '#333',
     borderWidth: 1,
     borderColor: '#ddd',
   },
-  intensityButtonSelected: {
-    backgroundColor: '#667eea',
-    borderColor: '#667eea',
+  notesInput: {
+    height: 100,
+    textAlignVertical: 'top',
+  },
+  intensityContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  intensityButton: {
+    flex: 1,
+    padding: 15,
+    borderRadius: 10,
+    alignItems: 'center',
+    marginHorizontal: 5,
+    backgroundColor: '#fff',
+    borderWidth: 2,
+    borderColor: '#ddd',
   },
   intensityText: {
     fontSize: 14,
@@ -319,39 +326,41 @@ const styles = StyleSheet.create({
   intensityTextSelected: {
     color: '#fff',
   },
-  previewSection: {
-    backgroundColor: '#fff',
-    borderRadius: 10,
+  pointsPreview: {
+    backgroundColor: '#e8f5e9',
     padding: 15,
-    marginBottom: 20,
-    alignItems: 'center',
-  },
-  previewTitle: {
-    fontSize: 13,
-    color: '#999',
-    marginBottom: 5,
-  },
-  previewValue: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#FF6B6B',
-  },
-  logButton: {
-    backgroundColor: '#4CAF50',
-    paddingVertical: 16,
     borderRadius: 10,
     alignItems: 'center',
     marginBottom: 20,
   },
-  buttonDisabled: {
-    opacity: 0.6,
+  pointsPreviewText: {
+    fontSize: 16,
+    color: '#333',
   },
-  logButtonText: {
+  pointsValue: {
+    fontWeight: 'bold',
+    color: '#4CAF50',
+    fontSize: 20,
+  },
+  submitButton: {
+    borderRadius: 12,
+    overflow: 'hidden',
+    elevation: 3,
+    shadowColor: '#667eea',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+  },
+  submitGradient: {
+    padding: 18,
+    alignItems: 'center',
+  },
+  submitText: {
     color: '#fff',
     fontSize: 18,
     fontWeight: 'bold',
   },
-  spacer: {
+  bottomPadding: {
     height: 30,
   },
 });

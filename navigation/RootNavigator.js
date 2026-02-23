@@ -1,7 +1,7 @@
 // Navigation Setup
 import React from 'react';
 import { NavigationContainer } from '@react-navigation/native';
-import { createNativeStackNavigator } from '@react-navigation/stack';
+import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { useApp } from '../context/AppContext';
 import { ActivityIndicator, View, Text } from 'react-native';
@@ -16,6 +16,13 @@ import { QuestsScreen } from '../screens/app/QuestsScreen';
 import { LeaderboardScreen } from '../screens/app/LeaderboardScreen';
 import { ProfileScreen } from '../screens/app/ProfileScreen';
 import { LogActivityScreen } from '../screens/app/LogActivityScreen';
+
+// New Feature Screens
+import { StatsScreen } from '../screens/app/StatsScreen';
+import { CustomWorkoutsScreen } from '../screens/app/CustomWorkoutsScreen';
+import { CreateWorkoutScreen } from '../screens/app/CreateWorkoutScreen';
+import { FriendsScreen } from '../screens/app/FriendsScreen';
+import { ChallengesScreen } from '../screens/app/ChallengesScreen';
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -68,11 +75,27 @@ const AppNavigator = () => {
         }}
       />
       <Tab.Screen
+        name="Stats"
+        component={StatsScreen}
+        options={{
+          tabBarLabel: 'Stats',
+          tabBarIcon: ({ color }) => <Text style={{ fontSize: 20, color }}>📊</Text>,
+        }}
+      />
+      <Tab.Screen
         name="Leaderboard"
         component={LeaderboardScreen}
         options={{
           tabBarLabel: 'Rankings',
           tabBarIcon: ({ color }) => <Text style={{ fontSize: 20, color }}>🏆</Text>,
+        }}
+      />
+      <Tab.Screen
+        name="Social"
+        component={SocialStackNavigator}
+        options={{
+          tabBarLabel: 'Social',
+          tabBarIcon: ({ color }) => <Text style={{ fontSize: 20, color }}>👥</Text>,
         }}
       />
       <Tab.Screen
@@ -84,6 +107,22 @@ const AppNavigator = () => {
         }}
       />
     </Tab.Navigator>
+  );
+};
+
+// Social Stack Navigator (Friends + Challenges)
+const SocialStack = createNativeStackNavigator();
+
+const SocialStackNavigator = () => {
+  return (
+    <SocialStack.Navigator
+      screenOptions={{
+        headerShown: false,
+      }}
+    >
+      <SocialStack.Screen name="FriendsList" component={FriendsScreen} />
+      <SocialStack.Screen name="ChallengesList" component={ChallengesScreen} />
+    </SocialStack.Navigator>
   );
 };
 
@@ -110,13 +149,12 @@ export const RootNavigator = () => {
         {isLoggedIn ? (
           <Stack.Group>
             <Stack.Screen name="AppTabs" component={AppNavigator} />
-            <Stack.Screen
-              name="LogActivity"
-              component={LogActivityScreen}
-              options={{
-                animationEnabled: true,
-              }}
-            />
+            <Stack.Screen name="LogActivity" component={LogActivityScreen} options={{ animationEnabled: true }} />
+            <Stack.Screen name="Stats" component={StatsScreen} options={{ animationEnabled: true }} />
+            <Stack.Screen name="CustomWorkouts" component={CustomWorkoutsScreen} options={{ animationEnabled: true }} />
+            <Stack.Screen name="CreateWorkout" component={CreateWorkoutScreen} options={{ animationEnabled: true }} />
+            <Stack.Screen name="Friends" component={FriendsScreen} options={{ animationEnabled: true }} />
+            <Stack.Screen name="Challenges" component={ChallengesScreen} options={{ animationEnabled: true }} />
           </Stack.Group>
         ) : (
           <Stack.Screen name="Auth" component={AuthNavigator} />
@@ -125,5 +163,3 @@ export const RootNavigator = () => {
     </NavigationContainer>
   );
 };
-
-const Text = require('react-native').Text;
