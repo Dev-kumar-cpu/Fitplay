@@ -1,148 +1,211 @@
-// Quests Screen - Daily Challenges
+// Quests Screen - Daily Fitness Challenges
 import React, { useState, useEffect } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
+import { 
+  View, 
+  Text, 
+  StyleSheet, 
+  ScrollView, 
   TouchableOpacity,
-  Alert,
-  ActivityIndicator,
-  Modal,
-  TextInput,
+  RefreshControl,
+  Alert
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useApp } from '../context/AppContext';
-import {
-  dailyQuests,
-  completeQuest,
-  checkAndAwardBadges,
-} from '../services/gamificationService';
+import { useApp } from '../../context/AppContext';
+import { getDailyQuests, completeQuest, getQuestStatus } from '../../services/gamificationService';
+import { formatDuration, formatNumber } from '../../utils/helpers';
 
-const QuestCard = ({ quest, onComplete }) => (
-  <View style={styles.questCard}>
-    <View style={styles.questHeader}>
-      <Text style={styles.questTitle}>{quest.title}</Text>
-      <View style={styles.pointsBadge}>
-        <Text style={styles.pointsText}>+{quest.points}pts</Text>
-      </View>
-    </View>
-
-    <Text style={styles.questDescription}>{quest.description}</Text>
-
-    <View style={styles.questFooter}>
-      <Text style={styles.questDuration}>⏱️ {quest.duration} min</Text>
-      <TouchableOpacity
-        style={styles.completeButton}
-        onPress={() => onComplete(quest)}
-      >
-        <Text style={styles.completeButtonText}>Complete</Text>
-      </TouchableOpacity>
-    </View>
-  </View>
-);
-
-export const QuestsScreen = () => {
-  const { user } = useApp();
-  const [completionModal, setCompletionModal] = useState(false);
-  const [selectedQuest, setSelectedQuest] = useState(null);
-  const [actualDuration, setActualDuration] = useState('');
+export const QuestsScreen = ({ navigation }) => {
+  const { user, userProfile } = useApp();
+  const [refreshing, setRefreshing] = useState(false);
+  const [quests, setQuests] = useState([]);
+  const [completedQuestIds, setCompletedQuestIds] = useState([]);
   const [loading, setLoading] = useState(false);
 
-  const handleQuestSelect = (quest) => {
-    setSelectedQuest(quest);
-    setActualDuration(quest.duration.toString());
-    setCompletionModal(true);
+  const loadQuests = async () => {
+    if (!user) return;
+
+    try {
+      // Get available quests
+      const availableQuests = getDailyQuests();
+      setQuests(availableQuests);
+
+      // Get quest completion status
+      const statusResult = await getQuestStatus(user.uid);
+      if (statusResult.success) {
+        setCompletedQuestIds(statusResult.data.completedQuests);
+      }
+    } catch (error) {
+      console.error('Error loading quests:', error);
+    }
   };
 
-  const submitCompletion = async () => {
-    if (!actualDuration || isNaN(parseInt(actualDuration))) {
-      Alert.alert('Invalid Duration', 'Please enter a valid duration');
-      return;
-    }
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await loadQuests();
+    setRefreshing(false);
+  };
+
+  useEffect(() => {
+    loadQuests();
+  }, [user]);
+
+  const handleCompleteQuest = async (questId) => {
+    if (!user) return;
 
     setLoading(true);
     try {
-      const result = await completeQuest(user.uid, selectedQuest.id, parseInt(actualDuration));
+      const result = await completeQuest(user.uid, questId);
       
       if (result.success) {
-        await checkAndAwardBadges(user.uid);
-        Alert.alert(
-          'Quest Completed! 🎉',
-          `You earned ${result.pointsEarned} points!\nTotal: ${result.totalPoints}`,
-          [{ text: 'OK', onPress: () => setCompletionModal(false) }]
-        );
-        setActualDuration('');
-        setSelectedQuest(null);
+        // Add completed quest ID
+        setCompletedQuestIds(prev => [...prev, questId]);
+
+        // Show success message
+        const { pointsEarned, newBadges } = result.data;
+        let message = `🎉 Quest Completed!\n\n+${pointsEarned} points earned!`;
+        
+        if (newBadges && newBadges.length > 0) {
+          const badgeNames = newBadges.map(b => b.name).join(', ');
+          message += `\n\n🏆 New Badge(s): ${badgeNames}`;
+        }
+
+        Alert.alert('Congratulations!', message);
+      } else {
+        Alert.alert('Error', result.error || 'Could not complete quest');
       }
     } catch (error) {
-      Alert.alert('Error', error.message);
+      Alert.alert('Error', 'An unexpected error occurred');
     } finally {
       setLoading(false);
     }
   };
 
+  const completedCount = completedQuestIds.length;
+  const totalPoints = quests.reduce((sum, q) => sum + q.points, 0);
+  const earnedPoints = quests
+    .filter(q => completedQuestIds.includes(q.id))
+    .reduce((sum, q) => sum + q.points, 0);
+
   return (
-    <View style={styles.container}>
-      <LinearGradient colors={['#667eea', '#764ba2']} style={styles.header}>
-        <Text style={styles.headerTitle}>Daily Quests 🎯</Text>
-        <Text style={styles.headerSubtitle}>Complete quests to earn points</Text>
-      </LinearGradient>
-
-      <ScrollView style={styles.scrollContainer}>
-        {dailyQuests.map((quest) => (
-          <QuestCard
-            key={quest.id}
-            quest={quest}
-            onComplete={handleQuestSelect}
-          />
-        ))}
-      </ScrollView>
-
-      {/* Completion Modal */}
-      <Modal visible={completionModal} transparent animationType="slide">
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>{selectedQuest?.title}</Text>
-            <Text style={styles.modalDescription}>
-              {selectedQuest?.description}
-            </Text>
-
-            <Text style={styles.labelText}>How long did you exercise? (minutes)</Text>
-            <TextInput
-              style={styles.durationInput}
-              placeholder="Enter duration"
-              keyboardType="numeric"
-              value={actualDuration}
-              onChangeText={setActualDuration}
-              editable={!loading}
+    <ScrollView 
+      style={styles.container}
+      refreshControl={
+        <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#667eea']} />
+      }
+    >
+      {/* Header */}
+      <LinearGradient
+        colors={['#f093fb', '#f5576c']}
+        style={styles.header}
+      >
+        <Text style={styles.headerTitle}>🎯 Daily Quests</Text>
+        <Text style={styles.headerSubtitle}>Complete challenges to earn points!</Text>
+        
+        {/* Progress Summary */}
+        <View style={styles.progressContainer}>
+          <View style={styles.progressBar}>
+            <View 
+              style={[
+                styles.progressFill, 
+                { width: `${(completedCount / quests.length) * 100}%` }
+              ]} 
             />
+          </View>
+          <Text style={styles.progressText}>
+            {completedCount}/{quests.length} Completed
+          </Text>
+        </View>
 
-            <View style={styles.modalButtonContainer}>
-              <TouchableOpacity
-                style={styles.modalCancelButton}
-                onPress={() => setCompletionModal(false)}
-                disabled={loading}
-              >
-                <Text style={styles.modalCancelText}>Cancel</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={[styles.modalSubmitButton, loading && styles.buttonDisabled]}
-                onPress={submitCompletion}
-                disabled={loading}
-              >
-                {loading ? (
-                  <ActivityIndicator color="#fff" />
-                ) : (
-                  <Text style={styles.modalSubmitText}>Confirm</Text>
-                )}
-              </TouchableOpacity>
-            </View>
+        <View style={styles.pointsContainer}>
+          <View style={styles.pointsCard}>
+            <Text style={styles.pointsValue}>{earnedPoints}</Text>
+            <Text style={styles.pointsLabel}>Earned</Text>
+          </View>
+          <View style={styles.pointsCard}>
+            <Text style={styles.pointsValue}>{totalPoints - earnedPoints}</Text>
+            <Text style={styles.pointsLabel}>Remaining</Text>
           </View>
         </View>
-      </Modal>
-    </View>
+      </LinearGradient>
+
+      {/* Quest List */}
+      <View style={styles.questList}>
+        {quests.map((quest) => {
+          const isCompleted = completedQuestIds.includes(quest.id);
+          
+          return (
+            <View 
+              key={quest.id} 
+              style={[styles.questCard, isCompleted && styles.questCardCompleted]}
+            >
+              <View style={styles.questHeader}>
+                <View style={styles.questIconContainer}>
+                  <Text style={styles.questIcon}>{quest.icon}</Text>
+                </View>
+                <View style={styles.questInfo}>
+                  <Text style={styles.questTitle}>{quest.title}</Text>
+                  <Text style={styles.questDescription}>{quest.description}</Text>
+                </View>
+                <View style={[styles.questPoints, isCompleted && styles.questPointsCompleted]}>
+                  <Text style={[styles.questPointsText, isCompleted && styles.questPointsTextCompleted]}>
+                    +{quest.points}
+                  </Text>
+                </View>
+              </View>
+
+              <View style={styles.questDetails}>
+                <View style={styles.questDetail}>
+                  <Text style={styles.questDetailLabel}>Duration</Text>
+                  <Text style={styles.questDetailValue}>{formatDuration(quest.duration)}</Text>
+                </View>
+                {quest.activityType && (
+                  <View style={styles.questDetail}>
+                    <Text style={styles.questDetailLabel}>Type</Text>
+                    <Text style={styles.questDetailValue}>
+                      {quest.activityType.charAt(0).toUpperCase() + quest.activityType.slice(1)}
+                    </Text>
+                  </View>
+                )}
+              </View>
+
+              <TouchableOpacity
+                style={[
+                  styles.completeButton,
+                  isCompleted && styles.completeButtonCompleted
+                ]}
+                onPress={() => !isCompleted && handleCompleteQuest(quest.id)}
+                disabled={isCompleted || loading}
+              >
+                <LinearGradient
+                  colors={isCompleted ? ['#4CAF50', '#45a049'] : ['#667eea', '#764ba2']}
+                  style={styles.buttonGradient}
+                >
+                  <Text style={styles.completeButtonText}>
+                    {isCompleted ? '✓ Completed' : 'Complete Quest'}
+                  </Text>
+                </LinearGradient>
+              </TouchableOpacity>
+            </View>
+          );
+        })}
+      </View>
+
+      {/* Tips Section */}
+      <View style={styles.tipsSection}>
+        <Text style={styles.tipsTitle}>💡 Quest Tips</Text>
+        <View style={styles.tipItem}>
+          <Text style={styles.tipText}>• Complete all quests daily for maximum points</Text>
+        </View>
+        <View style={styles.tipItem}>
+          <Text style={styles.tipText}>• Quests reset at midnight - don't miss out!</Text>
+        </View>
+        <View style={styles.tipItem}>
+          <Text style={styles.tipText}>• Combine quests with your regular workouts</Text>
+        </View>
+      </View>
+
+      <View style={styles.bottomPadding} />
+    </ScrollView>
   );
 };
 
@@ -152,152 +215,187 @@ const styles = StyleSheet.create({
     backgroundColor: '#f5f5f5',
   },
   header: {
-    paddingHorizontal: 20,
-    paddingVertical: 30,
     paddingTop: 50,
+    paddingBottom: 25,
+    paddingHorizontal: 20,
+    borderBottomLeftRadius: 30,
+    borderBottomRightRadius: 30,
   },
   headerTitle: {
     fontSize: 28,
     fontWeight: 'bold',
     color: '#fff',
+    textAlign: 'center',
   },
   headerSubtitle: {
     fontSize: 14,
-    color: '#e0e0e0',
+    color: 'rgba(255,255,255,0.8)',
+    textAlign: 'center',
     marginTop: 5,
+    marginBottom: 20,
   },
-  scrollContainer: {
-    flex: 1,
+  progressContainer: {
+    marginBottom: 15,
+  },
+  progressBar: {
+    height: 10,
+    backgroundColor: 'rgba(255,255,255,0.3)',
+    borderRadius: 5,
+    overflow: 'hidden',
+  },
+  progressFill: {
+    height: '100%',
+    backgroundColor: '#fff',
+    borderRadius: 5,
+  },
+  progressText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '600',
+    textAlign: 'center',
+    marginTop: 8,
+  },
+  pointsContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+  },
+  pointsCard: {
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    borderRadius: 15,
     padding: 15,
+    alignItems: 'center',
+    minWidth: 100,
+  },
+  pointsValue: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#fff',
+  },
+  pointsLabel: {
+    fontSize: 12,
+    color: 'rgba(255,255,255,0.8)',
+    marginTop: 2,
+  },
+  questList: {
+    padding: 20,
   },
   questCard: {
     backgroundColor: '#fff',
-    borderRadius: 12,
+    borderRadius: 15,
     padding: 15,
-    marginBottom: 12,
+    marginBottom: 15,
+    elevation: 3,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
+    shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 2,
+    shadowRadius: 4,
+  },
+  questCardCompleted: {
+    backgroundColor: '#f0fff0',
+    borderWidth: 1,
+    borderColor: '#4CAF50',
   },
   questHeader: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 10,
+    marginBottom: 12,
   },
-  questTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#333',
+  questIconContainer: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    backgroundColor: '#f0f0f0',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  questIcon: {
+    fontSize: 26,
+  },
+  questInfo: {
     flex: 1,
   },
-  pointsBadge: {
-    backgroundColor: '#667eea',
+  questTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#333',
+  },
+  questDescription: {
+    fontSize: 13,
+    color: '#666',
+    marginTop: 2,
+  },
+  questPoints: {
+    backgroundColor: '#fff3e0',
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 20,
   },
-  pointsText: {
-    color: '#fff',
-    fontSize: 12,
+  questPointsCompleted: {
+    backgroundColor: '#4CAF50',
+  },
+  questPointsText: {
+    color: '#ff9800',
     fontWeight: 'bold',
-  },
-  questDescription: {
     fontSize: 14,
-    color: '#666',
-    marginBottom: 12,
   },
-  questFooter: {
+  questPointsTextCompleted: {
+    color: '#fff',
+  },
+  questDetails: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    marginBottom: 12,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: '#f0f0f0',
   },
-  questDuration: {
-    fontSize: 13,
+  questDetail: {
+    flex: 1,
+  },
+  questDetailLabel: {
+    fontSize: 12,
     color: '#999',
   },
+  questDetailValue: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#333',
+    marginTop: 2,
+  },
   completeButton: {
-    backgroundColor: '#4CAF50',
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    borderRadius: 8,
+    borderRadius: 10,
+    overflow: 'hidden',
+  },
+  completeButtonCompleted: {
+    opacity: 0.7,
+  },
+  buttonGradient: {
+    padding: 12,
+    alignItems: 'center',
   },
   completeButtonText: {
     color: '#fff',
     fontWeight: 'bold',
-    fontSize: 13,
+    fontSize: 14,
   },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'flex-end',
+  tipsSection: {
+    padding: 20,
+    paddingTop: 0,
   },
-  modalContent: {
-    backgroundColor: '#fff',
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    padding: 25,
-    paddingBottom: 35,
-  },
-  modalTitle: {
-    fontSize: 22,
+  tipsTitle: {
+    fontSize: 18,
     fontWeight: 'bold',
     color: '#333',
     marginBottom: 10,
   },
-  modalDescription: {
-    fontSize: 14,
-    color: '#666',
-    marginBottom: 20,
-  },
-  labelText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#333',
+  tipItem: {
     marginBottom: 8,
   },
-  durationInput: {
-    borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 10,
-    paddingHorizontal: 15,
-    paddingVertical: 12,
-    fontSize: 16,
-    marginBottom: 20,
-    backgroundColor: '#f9f9f9',
-  },
-  modalButtonContainer: {
-    flexDirection: 'row',
-    gap: 10,
-  },
-  modalCancelButton: {
-    flex: 1,
-    borderWidth: 1,
-    borderColor: '#ddd',
-    paddingVertical: 12,
-    borderRadius: 10,
-    alignItems: 'center',
-  },
-  modalCancelText: {
-    color: '#333',
-    fontWeight: 'bold',
+  tipText: {
     fontSize: 14,
+    color: '#666',
   },
-  modalSubmitButton: {
-    flex: 1,
-    backgroundColor: '#667eea',
-    paddingVertical: 12,
-    borderRadius: 10,
-    alignItems: 'center',
-  },
-  modalSubmitText: {
-    color: '#fff',
-    fontWeight: 'bold',
-    fontSize: 14,
-  },
-  buttonDisabled: {
-    opacity: 0.6,
+  bottomPadding: {
+    height: 20,
   },
 });

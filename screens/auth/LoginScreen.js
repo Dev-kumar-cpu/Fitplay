@@ -1,185 +1,391 @@
-// Login Screen
+/**
+ * LoginScreen.js - User Authentication Screen
+ * 
+ * This is the login screen for the FitPlay mobile app.
+ * It handles user authentication with email and password using Firebase Auth.
+ * 
+ * Features:
+ * - Email and password input fields
+ * - Form validation (email format, password length)
+ * - Loading state during authentication
+ * - Navigation to registration screen for new users
+ * - Pre-filled test credentials for development
+ * 
+ * @module screens/auth/LoginScreen
+ * @requires React
+ * @requires expo-linear-gradient
+ * @requires services/authService - Firebase authentication
+ * @requires utils/helpers - Validation functions
+ */
+
+// React library for creating React components
 import React, { useState } from 'react';
-import {
-  View,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  StyleSheet,
-  ScrollView,
-  Alert,
-  ActivityIndicator,
+// React Native UI components for building the interface
+import { 
+  View,                 // Container for layout
+  Text,                 // Text display component
+  TextInput,           // User input field component
+  TouchableOpacity,    // Touchable button component
+  StyleSheet,          // CSS-like styling
+  KeyboardAvoidingView, // Handles keyboard avoidance
+  Platform,            // Platform-specific constants
+  ScrollView,          // Scrollable container
+  Alert,               // Alert dialogs
+  ActivityIndicator    // Loading spinner
 } from 'react-native';
+// Expo library for gradient backgrounds
 import { LinearGradient } from 'expo-linear-gradient';
-import { loginUser } from '../services/authService';
-import { useApp } from '../context/AppContext';
-import { validateEmail, validatePassword } from '../utils/helpers';
+// Authentication service for Firebase login
+import { loginUser } from '../../services/authService';
+// Validation helper functions
+import { validateEmail, validatePassword } from '../../utils/helpers';
 
+/**
+ * LoginScreen Component
+ * User authentication screen for existing users to login with email/password
+ * 
+ * @param {object} navigation - React Navigation object for screen navigation
+ *                            Used to navigate to Register screen for new users
+ * @returns {JSX.Element} The rendered LoginScreen component with:
+ *                        - App logo and branding
+ *                        - Email input field
+ *                        - Password input field (secure)
+ *                        - Login button
+ *                        - Link to registration screen
+ */
 export const LoginScreen = ({ navigation }) => {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  // ============================================
+  // STATE MANAGEMENT - Component local state
+  // ============================================
+  
+  // Email state - stores user email input
+  // Pre-filled with test credentials for development convenience
+  const [email, setEmail] = useState('test@gmail.com');
+  
+  // Password state - stores user password input
+  // Pre-filled with test credentials for development convenience
+  const [password, setPassword] = useState('test123');
+  
+  // Loading state - tracks authentication progress
+  // Shows spinner when making API call to Firebase
   const [loading, setLoading] = useState(false);
-  const { setUser, setIsLoggedIn } = useApp();
+  
+  // Errors state - stores form validation error messages
+  // Object with keys matching field names
+  const [errors, setErrors] = useState({});
 
+  // ============================================
+  // VALIDATION FUNCTIONS
+  // ============================================
+
+  /**
+   * validate Function
+   * Validates email and password input fields
+   * Checks:
+   * - Email is not empty
+   * - Email format is valid
+   * - Password is not empty
+   * - Password is at least 6 characters
+   * 
+   * @returns {boolean} True if all validations pass, false otherwise
+   */
+  const validate = () => {
+    // Create empty errors object
+    const newErrors = {};
+    
+    // Validate email - must exist and be valid format
+    if (!email) {
+      newErrors.email = 'Email is required';
+    } else if (!validateEmail(email)) {
+      newErrors.email = 'Invalid email format';
+    }
+    
+    // Validate password - must exist and meet length requirement
+    if (!password) {
+      newErrors.password = 'Password is required';
+    } else if (password.length < 6) {
+      newErrors.password = 'Password must be at least 6 characters';
+    }
+    
+    // Update errors state with validation results
+    setErrors(newErrors);
+    
+    // Return true if no errors (empty object)
+    return Object.keys(newErrors).length === 0;
+  };
+
+  // ============================================
+  // EVENT HANDLERS
+  // ============================================
+
+  /**
+   * handleLogin Function
+   * Handler for login button press
+   * Validates input and calls Firebase authentication
+   * 
+   * @async
+   * @returns {Promise<void>} Updates loading state, shows alerts on error
+   */
   const handleLogin = async () => {
-    if (!validateEmail(email)) {
-      Alert.alert('Invalid Email', 'Please enter a valid email address');
+    // Log login attempt for debugging
+    console.log('Login clicked, email:', email, 'password length:', password.length);
+    
+    // Validate form input before attempting login
+    if (!validate()) {
+      console.log('Validation failed:', errors);
       return;
     }
 
-    if (!validatePassword(password)) {
-      Alert.alert('Invalid Password', 'Password must be at least 6 characters');
-      return;
-    }
-
+    // Set loading state to show spinner
     setLoading(true);
+    console.log('Attempting login...');
+    
     try {
+      // Call Firebase authentication service
       const result = await loginUser(email, password);
+      console.log('Login result:', result);
+      
+      // Check if login was successful
       if (result.success) {
-        setUser({ uid: result.uid, email: result.user.email });
-        setIsLoggedIn(true);
+        console.log('Login successful, user:', result.data);
+        // Navigation is automatically handled by AppContext state change
+        // When user state changes, RootNavigator switches to AppNavigator
       } else {
-        Alert.alert('Login Failed', result.error);
+        // Show error alert for failed login
+        console.log('Login failed:', result.error);
+        Alert.alert('Login Failed', result.error || 'Please check your credentials');
       }
     } catch (error) {
-      Alert.alert('Error', error.message);
+      // Catch any unexpected errors
+      console.error('Login error:', error);
+      Alert.alert('Error', 'An unexpected error occurred: ' + error.message);
     } finally {
+      // Always clear loading state when done
       setLoading(false);
     }
   };
 
+  // ============================================
+  // RENDER
+  // ============================================
+
   return (
-    <LinearGradient colors={['#667eea', '#764ba2']} style={styles.container}>
-      <ScrollView contentContainerStyle={styles.scrollContainer}>
-        <View style={styles.headerContainer}>
-          <Text style={styles.title}>FitPlay</Text>
-          <Text style={styles.subtitle}>Your Fitness Companion</Text>
-        </View>
+    // Full-screen gradient background
+    <LinearGradient
+      colors={['#667eea', '#764ba2']}
+      style={styles.container}
+    >
+      {/* KeyboardAvoidingView - Prevents keyboard from covering input fields */}
+      <KeyboardAvoidingView 
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={styles.keyboardView}
+      >
+        {/* ScrollView - Allows scrolling when keyboard is visible */}
+        <ScrollView 
+          contentContainerStyle={styles.scrollContent}
+          keyboardShouldPersistTaps="handled"
+        >
+          {/* Header Section - Logo and App Name */}
+          <View style={styles.header}>
+            {/* App Logo Emoji */}
+            <Text style={styles.logo}>🏃‍♂️</Text>
+            {/* App Title */}
+            <Text style={styles.title}>FitPlay</Text>
+            {/* App Tagline */}
+            <Text style={styles.subtitle}>Gamified Fitness Tracking</Text>
+          </View>
 
-        <View style={styles.formContainer}>
-          <Text style={styles.label}>Email</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="Enter your email"
-            placeholderTextColor="#999"
-            value={email}
-            onChangeText={setEmail}
-            keyboardType="email-address"
-            editable={!loading}
-          />
+          {/* Login Form Section */}
+          <View style={styles.form}>
+            {/* Form Title */}
+            <Text style={styles.formTitle}>Welcome Back!</Text>
+            <Text style={styles.formSubtitle}>Sign in to continue your journey</Text>
 
-          <Text style={styles.label}>Password</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="Enter your password"
-            placeholderTextColor="#999"
-            value={password}
-            onChangeText={setPassword}
-            secureTextEntry
-            editable={!loading}
-          />
+            {/* Email Input Field */}
+            <View style={styles.inputContainer}>
+              {/* Email Label */}
+              <Text style={styles.label}>Email</Text>
+              {/* Email Text Input */}
+              <TextInput
+                style={[styles.input, errors.email && styles.inputError]}
+                value={email}
+                onChangeText={setEmail}
+                placeholder="Enter your email"
+                placeholderTextColor="#999"
+                keyboardType="email-address"
+                autoCapitalize="none"
+                autoCorrect={false}
+              />
+              {/* Email Error Message */}
+              {errors.email && <Text style={styles.errorText}>{errors.email}</Text>}
+            </View>
 
-          <TouchableOpacity
-            style={[styles.loginButton, loading && styles.buttonDisabled]}
-            onPress={handleLogin}
-            disabled={loading}
-          >
-            {loading ? (
-              <ActivityIndicator color="#fff" />
-            ) : (
-              <Text style={styles.loginButtonText}>Login</Text>
-            )}
-          </TouchableOpacity>
+            {/* Password Input Field */}
+            <View style={styles.inputContainer}>
+              {/* Password Label */}
+              <Text style={styles.label}>Password</Text>
+              {/* Password Text Input (secure) */}
+              <TextInput
+                style={[styles.input, errors.password && styles.inputError]}
+                value={password}
+                onChangeText={setPassword}
+                placeholder="Enter your password"
+                placeholderTextColor="#999"
+                secureTextEntry
+              />
+              {/* Password Error Message */}
+              {errors.password && <Text style={styles.errorText}>{errors.password}</Text>}
+            </View>
 
-          <View style={styles.signupContainer}>
-            <Text style={styles.signupText}>Don't have an account? </Text>
-            <TouchableOpacity
-              onPress={() => navigation.navigate('Register')}
+            {/* Login Button */}
+            <TouchableOpacity 
+              style={styles.loginButton}
+              onPress={handleLogin}
               disabled={loading}
             >
-              <Text style={styles.signupLink}>Sign up</Text>
+              {/* Show spinner when loading, otherwise show text */}
+              {loading ? (
+                <ActivityIndicator color="#fff" />
+              ) : (
+                <Text style={styles.loginButtonText}>Sign In</Text>
+              )}
             </TouchableOpacity>
+
+            {/* Registration Link */}
+            <View style={styles.registerContainer}>
+              <Text style={styles.registerText}>Don't have an account? </Text>
+              {/* Touchable link to registration screen */}
+              <TouchableOpacity onPress={() => navigation.navigate('Register')}>
+                <Text style={styles.registerLink}>Sign Up</Text>
+              </TouchableOpacity>
+            </View>
           </View>
-        </View>
-      </ScrollView>
+        </ScrollView>
+      </KeyboardAvoidingView>
     </LinearGradient>
   );
 };
 
+// StyleSheet for component styling
 const styles = StyleSheet.create({
+  // Main container - full screen with gradient
   container: {
     flex: 1,
   },
-  scrollContainer: {
+  // Keyboard avoiding view wrapper
+  keyboardView: {
+    flex: 1,
+  },
+  // Scroll view content container
+  scrollContent: {
     flexGrow: 1,
     justifyContent: 'center',
     padding: 20,
   },
-  headerContainer: {
+  // Header section - logo and branding
+  header: {
     alignItems: 'center',
     marginBottom: 40,
   },
-  title: {
-    fontSize: 48,
-    fontWeight: 'bold',
-    color: '#fff',
+  // Logo emoji size
+  logo: {
+    fontSize: 60,
     marginBottom: 10,
   },
-  subtitle: {
-    fontSize: 18,
-    color: '#e0e0e0',
+  // App title - bold white text
+  title: {
+    fontSize: 36,
+    fontWeight: 'bold',
+    color: '#fff',
+    marginBottom: 5,
   },
-  formContainer: {
-    backgroundColor: 'rgba(255, 255, 255, 0.95)',
-    borderRadius: 15,
+  // App subtitle/tagline
+  subtitle: {
+    fontSize: 16,
+    color: 'rgba(255,255,255,0.8)',
+  },
+  // Form container - white card
+  form: {
+    backgroundColor: '#fff',
+    borderRadius: 20,
     padding: 25,
+    elevation: 5,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.25,
     shadowRadius: 3.84,
-    elevation: 5,
   },
+  // Form title
+  formTitle: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#333',
+    marginBottom: 5,
+  },
+  // Form subtitle
+  formSubtitle: {
+    fontSize: 14,
+    color: '#666',
+    marginBottom: 25,
+  },
+  // Input field container
+  inputContainer: {
+    marginBottom: 20,
+  },
+  // Input label
   label: {
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: '600',
     color: '#333',
     marginBottom: 8,
   },
+  // Text input field
   input: {
+    backgroundColor: '#f5f5f5',
+    borderRadius: 10,
+    padding: 15,
+    fontSize: 16,
+    color: '#333',
     borderWidth: 1,
     borderColor: '#ddd',
-    borderRadius: 10,
-    paddingHorizontal: 15,
-    paddingVertical: 12,
-    marginBottom: 20,
-    fontSize: 16,
-    backgroundColor: '#f9f9f9',
   },
+  // Error state for input
+  inputError: {
+    borderColor: '#F44336',
+  },
+  // Error message text
+  errorText: {
+    color: '#F44336',
+    fontSize: 12,
+    marginTop: 5,
+  },
+  // Login button - primary action
   loginButton: {
     backgroundColor: '#667eea',
-    paddingVertical: 14,
     borderRadius: 10,
+    padding: 15,
     alignItems: 'center',
     marginTop: 10,
   },
-  buttonDisabled: {
-    opacity: 0.6,
-  },
+  // Login button text
   loginButtonText: {
     color: '#fff',
     fontSize: 18,
     fontWeight: 'bold',
   },
-  signupContainer: {
+  // Registration link container
+  registerContainer: {
     flexDirection: 'row',
     justifyContent: 'center',
     marginTop: 20,
   },
-  signupText: {
+  // "Don't have account" text
+  registerText: {
     color: '#666',
     fontSize: 14,
   },
-  signupLink: {
+  // "Sign Up" link - clickable
+  registerLink: {
     color: '#667eea',
     fontSize: 14,
     fontWeight: 'bold',

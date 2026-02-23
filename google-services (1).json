@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "926966574991",
+    "project_id": "fit-play-5da58",
+    "storage_bucket": "fit-play-5da58.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:926966574991:android:4537a90db0af058c2a65fa",
+        "android_client_info": {
+          "package_name": "fitplay.com"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyC_ZrwLBis3EZwwF5oCOyfrxxMlinBh2rc"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

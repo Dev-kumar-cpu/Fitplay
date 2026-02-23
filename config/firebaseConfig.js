@@ -4,12 +4,13 @@ import { getAuth } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
 
 const firebaseConfig = {
-  apiKey: 'AIzaSyDemoKey1234567890',
-  authDomain: 'fitplay-app.firebaseapp.com',
-  projectId: 'fitplay-demo',
-  storageBucket: 'fitplay-demo.appspot.com',
-  messagingSenderId: '123456789',
-  appId: '1:123456789:web:abcdefg123456',
+  apiKey: "AIzaSyDHpyUkBjnOOA3r-5CrMnQartcLSpvnlT0",
+  authDomain: "fit-play-5da58.firebaseapp.com",
+  projectId: "fit-play-5da58",
+  storageBucket: "fit-play-5da58.firebasestorage.app",
+  messagingSenderId: "926966574991",
+  appId: "1:926966574991:web:414c7517dbab1df42a65fa",
+  measurementId: "G-YKR7EHS84F"
 };
 
 let app, auth, db;
